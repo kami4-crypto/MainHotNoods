@@ -105,19 +105,32 @@
             <!-- Left Panel: Menu Items -->
             <div class="lg:col-span-7 space-y-6">
 
-                <!-- Meal Deal Combo Banner -->
+                <!-- Meal Deal Combo Banner with Noodle Choice -->
                 <div class="bg-gradient-to-r from-red-950 via-cardBg to-cardBg border border-noodsRed/60 rounded-xl p-4 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <span class="bg-noodsGold text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">Special Offer</span>
                         <h2 class="text-lg font-bold text-white mt-1 flex items-center gap-2">
                             🍱 Hot Noods Meal Deal
                         </h2>
-                        <p class="text-xs text-gray-300">1x Ramen (or Udon) + 1x Green Tea</p>
+                        <p class="text-xs text-gray-300">1x Noodle Main + 1x Green Tea</p>
                         <p class="text-xs text-noodsGold font-bold mt-1">Fixed Bundle Price: $12,000</p>
                     </div>
-                    <button onclick="addComboToCart()" class="w-full sm:w-auto px-5 py-2.5 bg-noodsGold hover:bg-noodsGoldHover text-black font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 shrink-0 flex items-center justify-center gap-2">
-                        <span>+ Add Meal Deal</span>
-                    </button>
+
+                    <div class="flex flex-col gap-2 w-full sm:w-auto">
+                        <!-- Noodle Choice Selector -->
+                        <div class="flex bg-zinc-900 border border-zinc-700 rounded-lg p-1 text-xs">
+                            <button id="dealChoiceRamenBtn" onclick="selectDealChoice('ramen')" class="flex-1 px-3 py-1.5 rounded font-bold transition-all bg-noodsRed text-white">
+                                🍜 Ramen
+                            </button>
+                            <button id="dealChoiceUdonBtn" onclick="selectDealChoice('udon')" class="flex-1 px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white">
+                                🍜 Udon
+                            </button>
+                        </div>
+
+                        <button onclick="addComboToCart()" class="w-full px-5 py-2.5 bg-noodsGold hover:bg-noodsGoldHover text-black font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 shrink-0 flex items-center justify-center gap-2">
+                            <span>+ Add Meal Deal</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Individual Items Grid -->
@@ -168,24 +181,24 @@
                     <div class="pt-4 border-t border-cardBorder space-y-2">
                         <div class="flex justify-between text-xs text-gray-400">
                             <span>Subtotal</span>
-                            <span id="cartSubtotal">\$0</span>
+                            <span id="cartSubtotal">$0</span>
                         </div>
                         <div id="cartDiscountRow" class="flex justify-between text-xs text-noodsGreen hidden">
                             <span>MelEmergency Discount (20%)</span>
-                            <span id="cartDiscount">-\$0</span>
+                            <span id="cartDiscount">-$0</span>
                         </div>
                         <div class="flex justify-between text-xs text-gray-400">
                             <span>Production Craft Cost</span>
-                            <span id="cartCost">\$0</span>
+                            <span id="cartCost">$0</span>
                         </div>
                         <div class="flex justify-between items-baseline pt-2 border-t border-zinc-800">
                             <span class="text-sm font-bold text-white">Final Customer Total</span>
-                            <span id="cartTotal" class="text-2xl font-extrabold text-noodsGold">\$0</span>
+                            <span id="cartTotal" class="text-2xl font-extrabold text-noodsGold">$0</span>
                         </div>
 
                         <div class="bg-emerald-950/60 border border-emerald-800/60 rounded-lg p-2.5 flex justify-between items-center text-xs">
                             <span class="text-emerald-300 font-medium">Estimated Net Profit:</span>
-                            <span id="cartProfit" class="font-bold text-noodsGreen text-sm">\$0</span>
+                            <span id="cartProfit" class="font-bold text-noodsGreen text-sm">$0</span>
                         </div>
                     </div>
 
@@ -247,7 +260,7 @@
                             <tr class="border-b border-cardBorder text-gray-400 text-xs uppercase">
                                 <th class="py-3 px-3">Ingredient</th>
                                 <th class="py-3 px-3">Usage Demand</th>
-                                <th class="py-3 px-3">Unit Cost (\$)</th>
+                                <th class="py-3 px-3">Unit Cost ($)</th>
                                 <th class="py-3 px-3">Current Stock</th>
                                 <th class="py-3 px-3">Quick Restock</th>
                                 <th class="py-3 px-3 text-right">Actions</th>
@@ -276,7 +289,7 @@
                                 <th class="py-3 px-3">Item</th>
                                 <th class="py-3 px-3">Recipe Ingredients</th>
                                 <th class="py-3 px-3">Calculated Craft Cost</th>
-                                <th class="py-3 px-3">Selling Price (\$)</th>
+                                <th class="py-3 px-3">Selling Price ($)</th>
                                 <th class="py-3 px-3">Profit / Sale</th>
                                 <th class="py-3 px-3 text-right">Margin %</th>
                             </tr>
@@ -341,7 +354,8 @@
             }
         };
 
-        let cart = { tea: 0, miso: 0, udon: 0, ramen: 0, combo: 0 };
+        let cart = { tea: 0, miso: 0, udon: 0, ramen: 0, comboRamen: 0, comboUdon: 0 };
+        let selectedMealChoice = 'ramen'; // 'ramen' or 'udon'
         let isDiscountActive = false;
         let currentUser = null;
         let openOrders = [];
@@ -361,10 +375,10 @@
             const badge = document.getElementById('syncBadge');
             if (connected) {
                 badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950 border border-emerald-700 text-noodsGreen text-xs font-semibold";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-noodsGreen animate-pulse"></span> Live Synced Across Staff`;
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-noodsGreen animate-pulse"></span> Live Synced Across Staff';
             } else {
                 badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-950 border border-red-700 text-red-400 text-xs font-semibold";
-                badge.innerHTML = `<span>🔴 Sync Disconnected</span>`;
+                badge.innerHTML = '<span>🔴 Sync Disconnected</span>';
             }
         }
 
@@ -453,7 +467,7 @@
                 const qty = items[key] || 0;
                 if (qty > 0) {
                     const item = state.menu[key];
-                    lines.push({ key, icon: item.icon, name: item.name, qty, total: qty * item.price });
+                    lines.push({ key: key, icon: item.icon, name: item.name, qty: qty, total: qty * item.price });
                     subtotal += qty * item.price;
                     cost += qty * getDishCraftCost(item.recipe);
                     count += qty;
@@ -461,9 +475,10 @@
                 }
             }
 
-            if (items.combo > 0) {
-                const qty = items.combo;
-                lines.push({ key: 'combo', icon: '🍱', name: 'Hot Noods Meal Deal', qty, total: qty * COMBO_PRICE });
+            // Deal with Ramen
+            if (items.comboRamen > 0) {
+                const qty = items.comboRamen;
+                lines.push({ key: 'comboRamen', icon: '🍱', name: 'Meal Deal (Ramen + Tea)', qty: qty, total: qty * COMBO_PRICE });
                 subtotal += qty * COMBO_PRICE;
                 cost += qty * (getDishCraftCost(state.menu.tea.recipe) + getDishCraftCost(state.menu.ramen.recipe));
                 count += qty * 2;
@@ -471,9 +486,20 @@
                 accumulate(state.menu.ramen.recipe, qty);
             }
 
+            // Deal with Udon
+            if (items.comboUdon > 0) {
+                const qty = items.comboUdon;
+                lines.push({ key: 'comboUdon', icon: '🍱', name: 'Meal Deal (Udon + Tea)', qty: qty, total: qty * COMBO_PRICE });
+                subtotal += qty * COMBO_PRICE;
+                cost += qty * (getDishCraftCost(state.menu.tea.recipe) + getDishCraftCost(state.menu.udon.recipe));
+                count += qty * 2;
+                accumulate(state.menu.tea.recipe, qty);
+                accumulate(state.menu.udon.recipe, qty);
+            }
+
             const discountVal = discount ? subtotal * 0.20 : 0;
             const total = subtotal - discountVal;
-            return { lines, deductions, subtotal, cost, count, discountVal, total, profit: total - cost };
+            return { lines: lines, deductions: deductions, subtotal: subtotal, cost: cost, count: count, discountVal: discountVal, total: total, profit: total - cost };
         }
 
         function findShortage(deductions) {
@@ -482,7 +508,7 @@
                 const current = state.ingredients[ingKey]?.stock || 0;
                 if (current < required) {
                     const ingName = state.ingredients[ingKey]?.name || ingKey;
-                    return `Insufficient stock for ${ingName}! Need ${required}, have ${current}`;
+                    return 'Insufficient stock for ' + ingName + '! Need ' + required + ', have ' + current;
                 }
             }
             return null;
@@ -496,7 +522,7 @@
             }
             renderAll();
             await saveStateToFirestore();
-            await logActivity(title, `Items deducted from stock`, summary.total, 'SALE');
+            await logActivity(title, 'Items deducted from stock', summary.total, 'SALE');
         }
 
         function renderOpenOrders() {
@@ -505,7 +531,7 @@
             grid.innerHTML = '';
 
             if (openOrders.length === 0) {
-                grid.innerHTML = `<div class="text-center py-6 text-gray-500 text-sm w-full">No open orders. Build an order in the cart and hit "Hold as Open Order".</div>`;
+                grid.innerHTML = '<div class="text-center py-6 text-gray-500 text-sm w-full">No open orders. Build an order in the cart and hit "Hold as Open Order".</div>';
                 return;
             }
 
@@ -515,32 +541,38 @@
                 const busy = busyOrders.has(order.id);
                 const placed = order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
+                let linesHtml = summary.lines.map(function(l) {
+                    return '<div class="flex justify-between gap-2">' +
+                        '<span class="text-gray-300">' + l.qty + 'x ' + l.icon + ' ' + l.name + '</span>' +
+                        '<span class="text-gray-400">$' + l.total.toLocaleString() + '</span>' +
+                    '</div>';
+                }).join('');
+
+                if (order.discount) {
+                    linesHtml += '<div class="flex justify-between text-noodsGreen"><span>MelEmergency (20%)</span><span>-$' + summary.discountVal.toLocaleString() + '</span></div>';
+                }
+
                 const card = document.createElement('div');
-                card.className = `shrink-0 w-64 bg-zinc-900 border ${shortage ? 'border-red-800' : 'border-cardBorder'} rounded-xl p-4 flex flex-col gap-3 ${busy ? 'opacity-50' : ''}`;
-                card.innerHTML = `
-                    <div class="flex justify-between items-start gap-2">
-                        <div class="min-w-0">
-                            <div class="font-bold text-sm text-gray-100 truncate">${order.label || 'Order'}</div>
-                            <div class="text-[10px] text-gray-500">Placed ${placed}</div>
-                        </div>
-                        <button onclick="window.cancelOrder('${order.id}')" title="Cancel order" class="text-gray-500 hover:text-red-400 font-bold px-1 text-xs" ${busy ? 'disabled' : ''}>✕</button>
-                    </div>
-                    <div class="space-y-1 text-xs flex-1">
-                        ${summary.lines.map(l => `
-                            <div class="flex justify-between gap-2">
-                                <span class="text-gray-300">${l.qty}x${l.icon} ${l.name}</span> <span class="text-gray-400">$\${l.total.toLocaleString()}</span>
-                            </div>`).join('')}
-                        ${order.discount ? `<div class="flex justify-between text-noodsGreen"><span>MelEmergency (20%)</span><span>-\$\${summary.discountVal.toLocaleString()}</span></div>` : ''}
-                    </div>
-                    <div class="flex justify-between items-baseline border-t border-zinc-800 pt-2">
-                        <span class="text-xs text-gray-400">Total</span>
-                        <span class="text-lg font-extrabold text-noodsGold">$${summary.total.toLocaleString()}</span>
-                    </div>
-                    ${shortage ? `<div class="text-[10px] text-red-400 font-semibold">⚠️ \${shortage}</div>` : ''}
-                    <button onclick="window.completeOrder('${order.id}')" ${busy ? 'disabled' : ''} class="w-full px-3 py-2.5 bg-noodsGreen hover:bg-emerald-400 text-black font-extrabold text-xs rounded-lg transition-all shadow flex items-center justify-center gap-2 active:scale-95">
-                        <span>⚡</span> Complete & Deduct
-                    </button>
-                `;
+                card.className = 'shrink-0 w-64 bg-zinc-900 border ' + (shortage ? 'border-red-800' : 'border-cardBorder') + ' rounded-xl p-4 flex flex-col gap-3 ' + (busy ? 'opacity-50' : '');
+                
+                card.innerHTML = 
+                    '<div class="flex justify-between items-start gap-2">' +
+                        '<div class="min-w-0">' +
+                            '<div class="font-bold text-sm text-gray-100 truncate">' + (order.label || 'Order') + '</div>' +
+                            '<div class="text-[10px] text-gray-500">Placed ' + placed + '</div>' +
+                        '</div>' +
+                        '<button onclick="window.cancelOrder(\'' + order.id + '\')" title="Cancel order" class="text-gray-500 hover:text-red-400 font-bold px-1 text-xs" ' + (busy ? 'disabled' : '') + '>✕</button>' +
+                    '</div>' +
+                    '<div class="space-y-1 text-xs flex-1">' + linesHtml + '</div>' +
+                    '<div class="flex justify-between items-baseline border-t border-zinc-800 pt-2">' +
+                        '<span class="text-xs text-gray-400">Total</span>' +
+                        '<span class="text-lg font-extrabold text-noodsGold">$' + summary.total.toLocaleString() + '</span>' +
+                    '</div>' +
+                    (shortage ? '<div class="text-[10px] text-red-400 font-semibold">⚠️ ' + shortage + '</div>' : '') +
+                    '<button onclick="window.completeOrder(\'' + order.id + '\')" ' + (busy ? 'disabled' : '') + ' class="w-full px-3 py-2.5 bg-noodsGreen hover:bg-emerald-400 text-black font-extrabold text-xs rounded-lg transition-all shadow flex items-center justify-center gap-2 active:scale-95">' +
+                        '<span>⚡</span> Complete & Deduct' +
+                    '</button>';
+
                 grid.appendChild(card);
             });
         }
@@ -550,7 +582,7 @@
             logsList.innerHTML = '';
 
             if (logs.length === 0) {
-                logsList.innerHTML = `<div class="text-center py-8 text-gray-500 text-sm">No recorded sales or activity logs yet.</div>`;
+                logsList.innerHTML = '<div class="text-center py-8 text-gray-500 text-sm">No recorded sales or activity logs yet.</div>';
                 return;
             }
 
@@ -558,19 +590,18 @@
                 const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : 'Just now';
                 const el = document.createElement('div');
                 el.className = 'bg-zinc-900 border border-cardBorder p-3 rounded-lg flex justify-between items-center text-xs';
-                el.innerHTML = `
-                    <div class="space-y-0.5">
-                        <div class="font-bold text-gray-200 flex items-center gap-1.5">
-                            <span>${log.type === 'SALE' ? '💰' : '📦'}</span>
-                            <span>${log.title}</span>
-                        </div>
-                        <div class="text-gray-400 text-[11px]">${log.details || ''}</div>
-                    </div>
-                    <div class="text-right shrink-0">
-                        <div class="text-noodsGold font-bold">${log.amount != null ? '$' + Number(log.amount).toLocaleString() : ''}</div>
-                        <div class="text-[10px] text-gray-500">${dateStr}</div>
-                    </div>
-                `;
+                el.innerHTML = 
+                    '<div class="space-y-0.5">' +
+                        '<div class="font-bold text-gray-200 flex items-center gap-1.5">' +
+                            '<span>' + (log.type === 'SALE' ? '💰' : '📦') + '</span>' +
+                            '<span>' + log.title + '</span>' +
+                        '</div>' +
+                        '<div class="text-gray-400 text-[11px]">' + (log.details || '') + '</div>' +
+                    '</div>' +
+                    '<div class="text-right shrink-0">' +
+                        '<div class="text-noodsGold font-bold">' + (log.amount != null ? '$' + Number(log.amount).toLocaleString() : '') + '</div>' +
+                        '<div class="text-[10px] text-gray-500">' + dateStr + '</div>' +
+                    '</div>';
                 logsList.appendChild(el);
             });
         }
@@ -601,29 +632,28 @@
             for (const key in state.menu) {
                 const item = state.menu[key];
                 const craftCost = getDishCraftCost(item.recipe);
-                const ingText = Object.keys(item.recipe).map(k => `${item.recipe[k]}x ${state.ingredients[k]?.name || k}`).join(', ');
+                const ingText = Object.keys(item.recipe).map(k => (item.recipe[k] + 'x ' + (state.ingredients[k]?.name || k))).join(', ');
 
                 const card = document.createElement('div');
                 card.className = "bg-cardBg border border-cardBorder hover:border-noodsGold/40 rounded-xl p-4 transition-all flex flex-col justify-between gap-3 shadow-md";
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-base text-gray-100 flex items-center gap-1.5">${item.icon} ${item.name}</h3>
-                            <span class="text-noodsGold font-bold text-sm">$${item.price.toLocaleString()}</span>
-                        </div>
-                        <p class="text-xs text-gray-400 mt-1">${ingText}</p>
-                        <p class="text-[10px] text-gray-500 mt-0.5">Craft Cost: $${craftCost.toLocaleString()}</p>
-                    </div>
+                card.innerHTML = 
+                    '<div>' +
+                        '<div class="flex justify-between items-start">' +
+                            '<h3 class="font-bold text-base text-gray-100 flex items-center gap-1.5">' + item.icon + ' ' + item.name + '</h3>' +
+                            '<span class="text-noodsGold font-bold text-sm">$' + item.price.toLocaleString() + '</span>' +
+                        '</div>' +
+                        '<p class="text-xs text-gray-400 mt-1">' + ingText + '</p>' +
+                        '<p class="text-[10px] text-gray-500 mt-0.5">Craft Cost: $' + craftCost.toLocaleString() + '</p>' +
+                    '</div>' +
 
-                    <div class="flex items-center gap-2 mt-2">
-                        <button onclick="window.changeQty('${key}', -1)" class="w-9 h-9 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-all flex items-center justify-center active:scale-90 text-sm">-</button>
-                        <button onclick="window.changeQty('${key}', 1)" class="flex-1 h-9 bg-noodsRed hover:bg-red-600 text-white font-bold text-xs rounded-lg transition-all active:scale-95 shadow">+ ${item.name}</button>
-                        <div class="flex gap-1">
-                            <button onclick="window.changeQty('${key}', 5)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+5</button>
-                            <button onclick="window.changeQty('${key}', 10)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+10</button>
-                        </div>
-                    </div>
-                `;
+                    '<div class="flex items-center gap-2 mt-2">' +
+                        '<button onclick="window.changeQty(\'' + key + '\', -1)" class="w-9 h-9 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-all flex items-center justify-center active:scale-90 text-sm">-</button>' +
+                        '<button onclick="window.changeQty(\'' + key + '\', 1)" class="flex-1 h-9 bg-noodsRed hover:bg-red-600 text-white font-bold text-xs rounded-lg transition-all active:scale-95 shadow">+ ' + item.name + '</button>' +
+                        '<div class="flex gap-1">' +
+                            '<button onclick="window.changeQty(\'' + key + '\', 5)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+5</button>' +
+                            '<button onclick="window.changeQty(\'' + key + '\', 10)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+10</button>' +
+                        '</div>' +
+                    '</div>';
                 grid.appendChild(card);
             }
         }
@@ -636,14 +666,14 @@
             summary.lines.forEach(l => renderCartRow(container, l.icon, l.name, l.qty, l.total, l.key));
 
             if (summary.count === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-500 text-sm">Cart is empty. Click items to add.</div>`;
+                container.innerHTML = '<div class="text-center py-8 text-gray-500 text-sm">Cart is empty. Click items to add.</div>';
             }
 
-            document.getElementById('cartSubtotal').innerText = `$${summary.subtotal.toLocaleString()}`;
-            document.getElementById('cartDiscount').innerText = `-$${summary.discountVal.toLocaleString()}`;
-            document.getElementById('cartCost').innerText = `$${summary.cost.toLocaleString()}`;
-            document.getElementById('cartTotal').innerText = `$${summary.total.toLocaleString()}`;
-            document.getElementById('cartProfit').innerText = `$${summary.profit.toLocaleString()}`;
+            document.getElementById('cartSubtotal').innerText = '$' + summary.subtotal.toLocaleString();
+            document.getElementById('cartDiscount').innerText = '-$' + summary.discountVal.toLocaleString();
+            document.getElementById('cartCost').innerText = '$' + summary.cost.toLocaleString();
+            document.getElementById('cartTotal').innerText = '$' + summary.total.toLocaleString();
+            document.getElementById('cartProfit').innerText = '$' + summary.profit.toLocaleString();
 
             const discRow = document.getElementById('cartDiscountRow');
             if (isDiscountActive) discRow.classList.remove('hidden');
@@ -653,19 +683,18 @@
         function renderCartRow(container, icon, name, qty, total, key) {
             const row = document.createElement('div');
             row.className = 'flex items-center justify-between bg-zinc-900 p-2.5 rounded-lg border border-zinc-800 text-xs';
-            row.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <span class="text-base">${icon}</span>
-                    <div>
-                        <div class="font-bold text-gray-200">${name}</div>
-                        <div class="text-gray-400">Qty: ${qty}</div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="font-bold text-noodsGold">$${total.toLocaleString()}</span>
-                    <button onclick="window.removeCartItem('${key}')" class="text-gray-500 hover:text-red-400 font-bold px-1.5">✕</button>
-                </div>
-            `;
+            row.innerHTML = 
+                '<div class="flex items-center gap-2">' +
+                    '<span class="text-base">' + icon + '</span>' +
+                    '<div>' +
+                        '<div class="font-bold text-gray-200">' + name + '</div>' +
+                        '<div class="text-gray-400">Qty: ' + qty + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="flex items-center gap-3">' +
+                    '<span class="font-bold text-noodsGold">$' + total.toLocaleString() + '</span>' +
+                    '<button onclick="window.removeCartItem(\'' + key + '\')" class="text-gray-500 hover:text-red-400 font-bold px-1.5">✕</button>' +
+                '</div>';
             container.appendChild(row);
         }
 
@@ -693,19 +722,18 @@
 
                 const card = document.createElement('div');
                 card.className = "bg-zinc-900 border border-cardBorder rounded-lg p-3 flex flex-col justify-between";
-                card.innerHTML = `
-                    <div>
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-sm text-gray-200 flex items-center gap-1">${item.icon} ${item.name}</span>
-                            <span class="text-xs font-extrabold px-2 py-0.5 rounded ${maxCraftable > 10 ? 'bg-emerald-950 text-noodsGreen' : 'bg-red-950 text-red-400'}">
-                                ${maxCraftable} Available
-                            </span>
-                        </div>
-                        <p class="text-[11px] text-gray-400 mt-2">
-                            Bottleneck: <span class="font-semibold text-noodsGold">${limitingIng || 'None'}</span>
-                        </p>
-                    </div>
-                `;
+                card.innerHTML = 
+                    '<div>' +
+                        '<div class="flex justify-between items-center">' +
+                            '<span class="font-bold text-sm text-gray-200 flex items-center gap-1">' + item.icon + ' ' + item.name + '</span>' +
+                            '<span class="text-xs font-extrabold px-2 py-0.5 rounded ' + (maxCraftable > 10 ? 'bg-emerald-950 text-noodsGreen' : 'bg-red-950 text-red-400') + '">' +
+                                maxCraftable + ' Available' +
+                            '</span>' +
+                        '</div>' +
+                        '<p class="text-[11px] text-gray-400 mt-2">' +
+                            'Bottleneck: <span class="font-semibold text-noodsGold">' + (limitingIng || 'None') + '</span>' +
+                        '</p>' +
+                    '</div>';
                 grid.appendChild(card);
             }
         }
@@ -718,34 +746,32 @@
                 const ing = state.ingredients[key];
                 const tr = document.createElement('tr');
 
-                tr.innerHTML = `
-                    <td class="py-3 px-3 font-semibold text-gray-200">${ing.name}</td>
-                    <td class="py-3 px-3">
-                        ${ing.highDemand 
-                            ? `<span class="bg-red-950 text-noodsRed text-[10px] font-bold px-2 py-0.5 rounded-full border border-noodsRed/40">🔥 High Demand (\${ing.demand}x)</span>`
-                            : `<span class="text-gray-400 text-xs">Standard (1x)</span>`
-                        }
-                    </td>
-                    <td class="py-3 px-3">
-                        <div class="flex items-center gap-1">
-                            <span class="text-gray-400">$</span>
-                            <input type="number" value="${ing.cost}" onchange="window.updateIngCost('${key}', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">
-                        </div>
-                    </td>
-                    <td class="py-3 px-3">
-                        <input type="number" value="${ing.stock}" onchange="window.updateIngStock('${key}', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white font-bold focus:outline-none focus:border-noodsGold">
-                    </td>
-                    <td class="py-3 px-3">
-                        <div class="flex gap-1">
-                            <button onclick="window.addStock('${key}', 10)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+10</button>
-                            <button onclick="window.addStock('${key}', 50)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+50</button>
-                            <button onclick="window.addStock('${key}', 100)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+100</button>
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-right">
-                        <button onclick="window.resetStock('${key}')" class="text-xs text-gray-500 hover:text-red-400">Reset</button>
-                    </td>
-                `;
+                const demandBadge = ing.highDemand 
+                    ? '<span class="bg-red-950 text-noodsRed text-[10px] font-bold px-2 py-0.5 rounded-full border border-noodsRed/40">🔥 High Demand (' + ing.demand + 'x)</span>'
+                    : '<span class="text-gray-400 text-xs">Standard (1x)</span>';
+
+                tr.innerHTML = 
+                    '<td class="py-3 px-3 font-semibold text-gray-200">' + ing.name + '</td>' +
+                    '<td class="py-3 px-3">' + demandBadge + '</td>' +
+                    '<td class="py-3 px-3">' +
+                        '<div class="flex items-center gap-1">' +
+                            '<span class="text-gray-400">$</span>' +
+                            '<input type="number" value="' + ing.cost + '" onchange="window.updateIngCost(\'' + key + '\', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="py-3 px-3">' +
+                        '<input type="number" value="' + ing.stock + '" onchange="window.updateIngStock(\'' + key + '\', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white font-bold focus:outline-none focus:border-noodsGold">' +
+                    '</td>' +
+                    '<td class="py-3 px-3">' +
+                        '<div class="flex gap-1">' +
+                            '<button onclick="window.addStock(\'' + key + '\', 10)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+10</button>' +
+                            '<button onclick="window.addStock(\'' + key + '\', 50)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+50</button>' +
+                            '<button onclick="window.addStock(\'' + key + '\', 100)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+100</button>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="py-3 px-3 text-right">' +
+                        '<button onclick="window.resetStock(\'' + key + '\')" class="text-xs text-gray-500 hover:text-red-400">Reset</button>' +
+                    '</td>';
                 tbody.appendChild(tr);
             }
         }
@@ -759,28 +785,27 @@
                 const craftCost = getDishCraftCost(item.recipe);
                 const profit = item.price - craftCost;
                 const margin = item.price > 0 ? ((profit / item.price) * 100).toFixed(1) : 0;
-                const ingText = Object.keys(item.recipe).map(k => `${item.recipe[k]}x ${state.ingredients[k]?.name || k}`).join(', ');
+                const ingText = Object.keys(item.recipe).map(k => (item.recipe[k] + 'x ' + (state.ingredients[k]?.name || k))).join(', ');
 
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="py-3 px-3 font-bold text-gray-200 flex items-center gap-1.5">
-                        <span>${item.icon}</span> ${item.name}
-                    </td>
-                    <td class="py-3 px-3 text-xs text-gray-400">${ingText}</td>
-                    <td class="py-3 px-3 text-xs text-red-300 font-semibold">$${craftCost.toLocaleString()}</td>
-                    <td class="py-3 px-3">
-                        <div class="flex items-center gap-1">
-                            <span class="text-gray-400">$</span>
-                            <input type="number" value="${item.price}" onchange="window.updateMenuPrice('${key}', this.value)" class="w-24 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">
-                        </div>
-                    </td>
-                    <td class="py-3 px-3 text-xs font-bold text-noodsGreen">+$${profit.toLocaleString()}</td>
-                    <td class="py-3 px-3 text-right">
-                        <span class="text-xs font-bold px-2 py-0.5 rounded ${margin > 70 ? 'bg-emerald-950 text-noodsGreen' : 'bg-yellow-950 text-noodsGold'}">
-                            ${margin}%
-                        </span>
-                    </td>
-                `;
+                tr.innerHTML = 
+                    '<td class="py-3 px-3 font-bold text-gray-200 flex items-center gap-1.5">' +
+                        'span>' + item.icon + '</span> ' + item.name +
+                    '</td>' +
+                    '<td class="py-3 px-3 text-xs text-gray-400">' + ingText + '</td>' +
+                    '<td class="py-3 px-3 text-xs text-red-300 font-semibold">$' + craftCost.toLocaleString() + '</td>' +
+                    '<td class="py-3 px-3">' +
+                        '<div class="flex items-center gap-1">' +
+                            '<span class="text-gray-400">$</span>' +
+                            '<input type="number" value="' + item.price + '" onchange="window.updateMenuPrice(\'' + key + '\', this.value)" class="w-24 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="py-3 px-3 text-xs font-bold text-noodsGreen">+$' + profit.toLocaleString() + '</td>' +
+                    '<td class="py-3 px-3 text-right">' +
+                        '<span class="text-xs font-bold px-2 py-0.5 rounded ' + (margin > 70 ? 'bg-emerald-950 text-noodsGreen' : 'bg-yellow-950 text-noodsGold') + '">' +
+                            margin + '%' +
+                        '</span>' +
+                    '</td>';
                 tbody.appendChild(tr);
             }
         }
@@ -791,10 +816,29 @@
             renderCart();
         };
 
+        window.selectDealChoice = function(choice) {
+            selectedMealChoice = choice;
+            const ramenBtn = document.getElementById('dealChoiceRamenBtn');
+            const udonBtn = document.getElementById('dealChoiceUdonBtn');
+
+            if (choice === 'ramen') {
+                ramenBtn.className = "flex-1 px-3 py-1.5 rounded font-bold transition-all bg-noodsRed text-white";
+                udonBtn.className = "flex-1 px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white";
+            } else {
+                udonBtn.className = "flex-1 px-3 py-1.5 rounded font-bold transition-all bg-noodsRed text-white";
+                ramenBtn.className = "flex-1 px-3 py-1.5 rounded font-bold transition-all text-gray-400 hover:text-white";
+            }
+        };
+
         window.addComboToCart = function() {
-            cart.combo++;
+            if (selectedMealChoice === 'ramen') {
+                cart.comboRamen++;
+                showToast("Added Meal Deal (Ramen + Tea) to cart!");
+            } else {
+                cart.comboUdon++;
+                showToast("Added Meal Deal (Udon + Tea) to cart!");
+            }
             renderCart();
-            showToast("Added Meal Deal Combo to cart!");
         };
 
         window.removeCartItem = function(key) {
@@ -803,7 +847,7 @@
         };
 
         window.clearCart = function() {
-            cart = { tea: 0, miso: 0, udon: 0, ramen: 0, combo: 0 };
+            cart = { tea: 0, miso: 0, udon: 0, ramen: 0, comboRamen: 0, comboUdon: 0 };
             renderCart();
         };
 
@@ -829,12 +873,12 @@
 
             const shortage = findShortage(summary.deductions);
             if (shortage) {
-                showToast(`⚠️ ${shortage}`, "red");
+                showToast("⚠️ " + shortage, "red");
                 return;
             }
 
             clearCart();
-            await applySale(summary, `Completed Sale (${summary.count} items)`);
+            await applySale(summary, 'Completed Sale (' + summary.count + ' items)');
             showToast("✅ Sale completed & stock deducted live!");
         };
 
@@ -870,7 +914,7 @@
             const summary = summarizeOrder(order.items, order.discount);
             const shortage = findShortage(summary.deductions);
             if (shortage) {
-                showToast(`⚠️ ${shortage}`, "red");
+                showToast("⚠️ " + shortage, "red");
                 return;
             }
 
@@ -879,8 +923,8 @@
             try {
                 await deleteDoc(doc(db, "hotnoods_orders", id));
                 const name = order.label || 'Order';
-                await applySale(summary, `Completed ${name} (${summary.count} items)`);
-                showToast(`✅ ${name} completed & stock deducted!`);
+                await applySale(summary, 'Completed ' + name + ' (' + summary.count + ' items)');
+                showToast("✅ " + name + " completed & stock deducted!");
             } catch (err) {
                 console.error("Complete order failed:", err);
                 showToast("❌ Failed to complete order", "red");
@@ -893,7 +937,7 @@
         window.cancelOrder = async function(id) {
             const order = openOrders.find(o => o.id === id);
             if (!order || busyOrders.has(id)) return;
-            if (!confirm(`Cancel ${order.label || 'order'}? No stock will be deducted.`)) return;
+            if (!confirm('Cancel ' + (order.label || 'order') + '? No stock will be deducted.')) return;
 
             busyOrders.add(id);
             renderOpenOrders();
@@ -915,15 +959,20 @@
 
             for (const key in state.menu) {
                 if (cart[key] > 0) {
-                    const line = `${cart[key]}x ${state.menu[key].name} ($${(cart[key] * state.menu[key].price).toLocaleString()})`;
+                    const line = cart[key] + 'x ' + state.menu[key].name + ' ($' + (cart[key] * state.menu[key].price).toLocaleString() + ')';
                     itemsText.push(line);
                     subtotal += cart[key] * state.menu[key].price;
                 }
             }
 
-            if (cart.combo > 0) {
-                itemsText.push(`${cart.combo}x Hot Noods Meal Deal ($${(cart.combo * 12000).toLocaleString()})`);
-                subtotal += cart.combo * 12000;
+            if (cart.comboRamen > 0) {
+                itemsText.push(cart.comboRamen + 'x Meal Deal (Ramen + Tea) ($' + (cart.comboRamen * 12000).toLocaleString() + ')');
+                subtotal += cart.comboRamen * 12000;
+            }
+
+            if (cart.comboUdon > 0) {
+                itemsText.push(cart.comboUdon + 'x Meal Deal (Udon + Tea) ($' + (cart.comboUdon * 12000).toLocaleString() + ')');
+                subtotal += cart.comboUdon * 12000;
             }
 
             if (itemsText.length === 0) {
@@ -934,11 +983,11 @@
             const discount = isDiscountActive ? subtotal * 0.20 : 0;
             const finalTotal = subtotal - discount;
 
-            const receiptString = `*** 🍜 HOT NOODS ORDER RECEIPT ***\n` +
-                itemsText.join('\n') + `\n` +
-                (isDiscountActive ? `Discount (MelEmergency 20%): -$${discount.toLocaleString()}\n` : '') +
-                `--------------------------\n` +
-                `TOTAL: $${finalTotal.toLocaleString()}`;
+            const receiptString = "*** 🍜 HOT NOODS ORDER RECEIPT ***\n" +
+                itemsText.join('\n') + "\n" +
+                (isDiscountActive ? "Discount (MelEmergency 20%): -$" + discount.toLocaleString() + "\n" : "") +
+                "--------------------------\n" +
+                "TOTAL: $" + finalTotal.toLocaleString();
 
             const temp = document.createElement('textarea');
             temp.value = receiptString;
@@ -953,33 +1002,33 @@
         window.updateIngCost = async function(key, val) {
             state.ingredients[key].cost = Math.max(0, parseFloat(val) || 0);
             await saveStateToFirestore();
-            showToast(`Updated ${state.ingredients[key].name} unit cost to $${state.ingredients[key].cost}`);
+            showToast('Updated ' + state.ingredients[key].name + ' unit cost to $' + state.ingredients[key].cost);
         };
 
         window.updateIngStock = async function(key, val) {
             state.ingredients[key].stock = Math.max(0, parseInt(val) || 0);
             await saveStateToFirestore();
-            showToast(`Updated ${state.ingredients[key].name} stock to ${state.ingredients[key].stock}`);
+            showToast('Updated ' + state.ingredients[key].name + ' stock to ' + state.ingredients[key].stock);
         };
 
         window.addStock = async function(key, count) {
             state.ingredients[key].stock += count;
             await saveStateToFirestore();
-            await logActivity(`Restocked ${state.ingredients[key].name}`, `Added +${count} units (Total: ${state.ingredients[key].stock})`, null, 'RESTOCK');
-            showToast(`Added +${count} ${state.ingredients[key].name} to stock!`);
+            await logActivity('Restocked ' + state.ingredients[key].name, 'Added +' + count + ' units (Total: ' + state.ingredients[key].stock + ')', null, 'RESTOCK');
+            showToast('Added +' + count + ' ' + state.ingredients[key].name + ' to stock!');
         };
 
         window.resetStock = async function(key) {
             state.ingredients[key].stock = 0;
             await saveStateToFirestore();
-            showToast(`Reset ${state.ingredients[key].name} stock to 0`);
+            showToast('Reset ' + state.ingredients[key].name + ' stock to 0');
         };
 
         window.updateMenuPrice = async function(key, val) {
             state.menu[key].price = Math.max(0, parseFloat(val) || 0);
             await saveStateToFirestore();
-            await logActivity(`Updated ${state.menu[key].name} Price`, `New price set to $${state.menu[key].price}`, state.menu[key].price, 'PRICE');
-            showToast(`Updated ${state.menu[key].name} price to $${state.menu[key].price}`);
+            await logActivity('Updated ' + state.menu[key].name + ' Price', 'New price set to $' + state.menu[key].price, state.menu[key].price, 'PRICE');
+            showToast('Updated ' + state.menu[key].name + ' price to $' + state.menu[key].price);
         };
 
         window.switchTab = function(tab) {
@@ -1003,7 +1052,7 @@
             }
         };
 
-        function showToast(msg, color = "green") {
+        function showToast(msg, color) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
             const toastIcon = document.getElementById('toastIcon');
@@ -1017,7 +1066,7 @@
                 toastIcon.innerText = "✅";
             }
 
-            toast.classList.add('hidden');
+            toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 3000);
         }
 
