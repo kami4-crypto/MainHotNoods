@@ -26,22 +26,10 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #121212;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 3px;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #ffffff; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -227,7 +215,6 @@
         <!-- TAB 2: INVENTORY & EDITABLE COSTS -->
         <div id="tabInv" class="hidden space-y-8">
 
-            <!-- Capacity & Bottleneck Analyzer Card -->
             <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg">
                 <div class="flex items-center justify-between mb-4">
                     <div>
@@ -243,7 +230,7 @@
                 </div>
             </div>
 
-            <!-- Raw Ingredients Stock & Unit Cost Table -->
+            <!-- Raw Ingredients Stock Table -->
             <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cardBorder pb-3">
                     <div>
@@ -273,7 +260,7 @@
                 </div>
             </div>
 
-            <!-- Menu Item Price & Profit Margin Configuration -->
+            <!-- Menu Item Price Table -->
             <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
                 <div>
                     <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -321,10 +308,10 @@
 
     </main>
 
-    <!-- Firebase SDK & Live Cloud Synchronization Script -->
+    <!-- Firebase SDK Script -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB7UeJhFHhtVTROAmEfXAy74-X-DHNzScI",
@@ -336,10 +323,6 @@
             measurementId: "G-02QF58326Q"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // Default App State
         let state = {
             ingredients: {
                 teabag: { name: 'Teabag', cost: 800, stock: 100, demand: 1, recipes: ['tea'] },
@@ -363,7 +346,7 @@
         let currentUser = null;
         let openOrders = [];
         let busyOrders = new Set();
-        let localWriting = false;
+        let db = null;
 
         function getStaffId() {
             let id = localStorage.getItem('hotNoodsStaffId');
@@ -385,50 +368,53 @@
             }
         }
 
-        async function initFirebaseSync() {
+        async function startApp() {
             currentUser = { uid: getStaffId() };
             document.getElementById('staffUidDisplay').innerText = currentUser.uid;
-
-            // Check if Firestore document exists, if not initialize it
-            const docRef = doc(db, "hotnoods", "mainState");
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                await setDoc(docRef, { state, updatedAt: Date.now() });
-            }
-
-            // Real-time listener for Inventory & Menu updates
-            onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists() && !localWriting) {
-                    const data = docSnap.data();
-                    if (data.state) {
-                        state = data.state;
-                        renderAll();
-                    }
-                }
-                setBadge(true);
-            }, (error) => {
-                console.error("Firestore sync error:", error);
-                setBadge(false);
-            });
-
-            // Real-time listener for Open Orders
-            onSnapshot(collection(db, "hotnoods_orders"), (snapshot) => {
-                openOrders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderOpenOrders();
-            });
-
-            // Real-time listener for Audit Logs
-            onSnapshot(collection(db, "hotnoods_logs"), (snapshot) => {
-                const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                renderLogs(logs);
-            });
-
+            
             renderAll();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+
+                const docRef = doc(db, "hotnoods", "mainState");
+                
+                onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.state) {
+                            state = data.state;
+                            renderAll();
+                        }
+                    } else {
+                        setDoc(docRef, { state, updatedAt: Date.now() });
+                    }
+                    setBadge(true);
+                }, (err) => {
+                    console.error("Firestore snapshot error:", err);
+                    setBadge(false);
+                });
+
+                onSnapshot(collection(db, "hotnoods_orders"), (snapshot) => {
+                    openOrders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderOpenOrders();
+                });
+
+                onSnapshot(collection(db, "hotnoods_logs"), (snapshot) => {
+                    const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+                        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    renderLogs(logs);
+                });
+
+            } catch (err) {
+                console.error("Firebase init failed:", err);
+                setBadge(false);
+            }
         }
 
         async function saveStateToFirestore() {
-            localWriting = true;
+            if (!db) return;
             try {
                 const docRef = doc(db, "hotnoods", "mainState");
                 await setDoc(docRef, { state, updatedAt: Date.now() });
@@ -436,19 +422,17 @@
             } catch (err) {
                 console.error("Failed to save state:", err);
                 setBadge(false);
-                showToast("❌ Failed to sync to cloud", "red");
-            } finally {
-                setTimeout(() => { localWriting = false; }, 300);
             }
         }
 
         async function logActivity(title, details, amount = null, type = 'SALE') {
+            if (!db) return;
             try {
                 await addDoc(collection(db, "hotnoods_logs"), {
                     title, details, amount, type, staffUid: currentUser.uid, createdAt: Date.now()
                 });
             } catch (err) {
-                console.error("Failed to log activity:", err);
+                console.error("Failed to log:", err);
             }
         }
 
@@ -738,7 +722,7 @@
                     <td class="py-3 px-3 font-semibold text-gray-200">${ing.name}</td>
                     <td class="py-3 px-3">
                         ${ing.highDemand 
-                            ? `<span class="bg-red-950 text-noodsRed text-[10px] font-bold px-2 py-0.5 rounded-full border border-noodsRed/40">🔥 High Demand (${ing.demand}x)</span>`
+                            ? `<span class="bg-red-950 text-noodsRed text-[10px] font-bold px-2 py-0.5 rounded-full border border-noodsRed/40">🔥 High Demand (\${ing.demand}x)</span>`
                             : `<span class="text-gray-400 text-xs">Standard (1x)</span>`
                         }
                     </td>
@@ -1033,12 +1017,15 @@
                 toastIcon.innerText = "✅";
             }
 
-            toast.classList.remove('hidden');
+            toast.classList.add('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 3000);
         }
 
-        // Initialize Firebase on load
-        initFirebaseSync();
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", startApp);
+        } else {
+            startApp();
+        }
     </script>
 </body>
 </html>
