@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hot Noods - Live Collaborative POS & Inventory System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        noodsRed: '#ff4757',
+                        noodsRedDark: '#b22234',
+                        noodsGold: '#eccc68',
+                        noodsGoldHover: '#d4af37',
+                        noodsGreen: '#2ed573',
+                        darkBg: '#121212',
+                        cardBg: '#1e1e1e',
+                        cardBorder: '#2e2e2e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121212;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Header Bar -->
+    <header class="bg-cardBg border-b border-cardBorder sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🍜</span>
+                <div>
+                    <h1 class="text-xl font-extrabold text-noodsRed tracking-tight flex items-center gap-2">
+                        HOT NOODS <span class="text-xs text-noodsGold bg-red-950/80 border border-noodsRed/50 px-2 py-0.5 rounded-full uppercase tracking-widest font-semibold">Live POS</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Real-Time Register & Collaborative Inventory Tracker</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <!-- Live Connection Badge -->
+                <div id="syncBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-950/60 border border-yellow-700/60 text-yellow-400 text-xs font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400 animate-ping"></span>
+                    <span>Connecting to Firebase...</span>
+                </div>
+
+                <div class="text-xs text-gray-400 border-l border-cardBorder pl-3 hidden md:block">
+                    Staff ID: <span id="staffUidDisplay" class="font-mono text-gray-200">Initializing...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation Bar -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex border-t border-cardBorder text-sm font-semibold">
+            <button id="tabBtnPos" onclick="switchTab('pos')" class="px-5 py-3 border-b-2 border-noodsRed text-noodsRed flex items-center gap-2 transition-all">
+                <span>🧾</span> POS Register
+            </button>
+            <button id="tabBtnInv" onclick="switchTab('inv')" class="px-5 py-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2 transition-all">
+                <span>📦</span> Inventory & Editable Costs
+            </button>
+            <button id="tabBtnLogs" onclick="switchTab('logs')" class="px-5 py-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2 transition-all">
+                <span>📜</span> Live Sales & Audit Log
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Notification Toast Banner -->
+        <div id="toast" class="hidden fixed bottom-6 right-6 z-50 bg-noodsGreen text-black font-bold px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all border border-emerald-300">
+            <span id="toastIcon">✅</span>
+            <span id="toastMsg">Action completed successfully!</span>
+        </div>
+
+        <!-- TAB 1: POS REGISTER -->
+        <div id="tabPos" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Open Orders Board -->
+            <div class="lg:col-span-12 bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cardBorder pb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            🔥 Open Orders <span id="openOrdersCount" class="text-xs text-black bg-noodsGold font-extrabold px-2 py-0.5 rounded-full">0</span>
+                        </h2>
+                        <p class="text-xs text-gray-400">Orders in progress across all staff. Click <span class="text-noodsGreen font-semibold">Complete &amp; Deduct</span> when served.</p>
+                    </div>
+                </div>
+
+                <div id="openOrdersGrid" class="flex gap-4 overflow-x-auto pb-2">
+                    <div class="text-center py-6 text-gray-500 text-sm w-full">No open orders. Build an order in the cart and hit "Hold as Open Order".</div>
+                </div>
+            </div>
+
+            <!-- Left Panel: Menu Items -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Meal Deal Combo Banner -->
+                <div class="bg-gradient-to-r from-red-950 via-cardBg to-cardBg border border-noodsRed/60 rounded-xl p-4 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <span class="bg-noodsGold text-black font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wider">Special Offer</span>
+                        <h2 class="text-lg font-bold text-white mt-1 flex items-center gap-2">
+                            🍱 Hot Noods Meal Deal
+                        </h2>
+                        <p class="text-xs text-gray-300">1x Ramen (or Udon) + 1x Green Tea</p>
+                        <p class="text-xs text-noodsGold font-bold mt-1">Fixed Bundle Price: $12,000</p>
+                    </div>
+                    <button onclick="addComboToCart()" class="w-full sm:w-auto px-5 py-2.5 bg-noodsGold hover:bg-noodsGoldHover text-black font-bold text-sm rounded-lg shadow-md transition-all active:scale-95 shrink-0 flex items-center justify-center gap-2">
+                        <span>+ Add Meal Deal</span>
+                    </button>
+                </div>
+
+                <!-- Individual Items Grid -->
+                <div>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Individual Menu Items</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="posMenuGrid">
+                        <!-- Dynamic items -->
+                    </div>
+                </div>
+
+                <!-- Special Discounts Switch -->
+                <div class="bg-cardBg border border-cardBorder rounded-xl p-4 flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-red-950 border border-noodsRed/50 flex items-center justify-center text-lg">
+                            🚑
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-gray-100">MelEmergency Discount</h3>
+                            <p class="text-xs text-gray-400">Applies 20% discount to the overall order total</p>
+                        </div>
+                    </div>
+                    <button id="discountToggleBtn" onclick="toggleDiscount()" class="px-4 py-2 bg-zinc-800 text-gray-300 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-700 transition-all">
+                        OFF
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: Current Order Summary & Checkout -->
+            <div class="lg:col-span-5">
+                <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-xl sticky top-24 space-y-5">
+                    
+                    <div class="flex justify-between items-center pb-3 border-b border-cardBorder">
+                        <h2 class="text-base font-bold text-gray-100 flex items-center gap-2">
+                            <span>🧾</span> Current Order
+                        </h2>
+                        <button onclick="clearCart()" class="text-xs text-red-400 hover:text-red-300 font-medium flex items-center gap-1">
+                            🗑️ Clear Cart
+                        </button>
+                    </div>
+
+                    <!-- Cart Item List -->
+                    <div id="cartList" class="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                        <div class="text-center py-8 text-gray-500 text-sm">Cart is empty. Click items to add.</div>
+                    </div>
+
+                    <!-- Order Totals -->
+                    <div class="pt-4 border-t border-cardBorder space-y-2">
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>Subtotal</span>
+                            <span id="cartSubtotal">\$0</span>
+                        </div>
+                        <div id="cartDiscountRow" class="flex justify-between text-xs text-noodsGreen hidden">
+                            <span>MelEmergency Discount (20%)</span>
+                            <span id="cartDiscount">-\$0</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-400">
+                            <span>Production Craft Cost</span>
+                            <span id="cartCost">\$0</span>
+                        </div>
+                        <div class="flex justify-between items-baseline pt-2 border-t border-zinc-800">
+                            <span class="text-sm font-bold text-white">Final Customer Total</span>
+                            <span id="cartTotal" class="text-2xl font-extrabold text-noodsGold">\$0</span>
+                        </div>
+
+                        <div class="bg-emerald-950/60 border border-emerald-800/60 rounded-lg p-2.5 flex justify-between items-center text-xs">
+                            <span class="text-emerald-300 font-medium">Estimated Net Profit:</span>
+                            <span id="cartProfit" class="font-bold text-noodsGreen text-sm">\$0</span>
+                        </div>
+                    </div>
+
+                    <!-- Hold as Open Order -->
+                    <div class="pt-2 space-y-2">
+                        <input id="orderLabelInput" type="text" maxlength="60" placeholder="Order name (e.g. Table 4, Sam)" class="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-noodsGold">
+                        <button onclick="holdOrder()" class="w-full px-4 py-3 bg-noodsGold hover:bg-noodsGoldHover text-black font-extrabold text-xs rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                            <span>📌</span> Hold as Open Order
+                        </button>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button onclick="copyReceipt()" class="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 text-gray-200 font-bold text-xs rounded-lg transition-all border border-zinc-700 flex items-center justify-center gap-2">
+                            <span>📋</span> Copy Receipt
+                        </button>
+                        <button onclick="checkoutSale()" class="px-4 py-3 bg-noodsGreen hover:bg-emerald-400 text-black font-extrabold text-xs rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                            <span>⚡</span> Complete & Deduct
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 2: INVENTORY & EDITABLE COSTS -->
+        <div id="tabInv" class="hidden space-y-8">
+
+            <!-- Capacity & Bottleneck Analyzer Card -->
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            🔍 Craft Capacity & Bottleneck Analyzer
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Dynamically calculates maximum servings cookable based on live ingredient stock counts</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="bottleneckGrid">
+                    <!-- Dynamic capacity items -->
+                </div>
+            </div>
+
+            <!-- Raw Ingredients Stock & Unit Cost Table -->
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cardBorder pb-3">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            📦 Raw Ingredient Stock & Editable Unit Costs
+                        </h2>
+                        <p class="text-xs text-gray-400">Type directly into cost or stock fields to update in real time across all staff devices</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-cardBorder text-gray-400 text-xs uppercase">
+                                <th class="py-3 px-3">Ingredient</th>
+                                <th class="py-3 px-3">Usage Demand</th>
+                                <th class="py-3 px-3">Unit Cost (\$)</th>
+                                <th class="py-3 px-3">Current Stock</th>
+                                <th class="py-3 px-3">Quick Restock</th>
+                                <th class="py-3 px-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="divide-y divide-cardBorder">
+                            <!-- Dynamic ingredient rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Menu Item Price & Profit Margin Configuration -->
+            <div class="bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        🏷️ Menu Selling Prices & Cost Breakdown
+                    </h2>
+                    <p class="text-xs text-gray-400">Edit customer selling prices to calculate live profit margins</p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-cardBorder text-gray-400 text-xs uppercase">
+                                <th class="py-3 px-3">Item</th>
+                                <th class="py-3 px-3">Recipe Ingredients</th>
+                                <th class="py-3 px-3">Calculated Craft Cost</th>
+                                <th class="py-3 px-3">Selling Price (\$)</th>
+                                <th class="py-3 px-3">Profit / Sale</th>
+                                <th class="py-3 px-3 text-right">Margin %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menuPricingTableBody" class="divide-y divide-cardBorder">
+                            <!-- Dynamic pricing rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- TAB 3: LIVE SALES & AUDIT LOG -->
+        <div id="tabLogs" class="hidden bg-cardBg border border-cardBorder rounded-xl p-5 shadow-lg space-y-4">
+            <div class="flex justify-between items-center border-b border-cardBorder pb-3">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        📜 Real-Time Sales & Transaction Log
+                    </h2>
+                    <p class="text-xs text-gray-400">Live stream of completed orders, inventory restocks, and price adjustments</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1" id="auditLogList">
+                <div class="text-center py-8 text-gray-500 text-sm">Loading activity logs...</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Firebase SDK & Live Cloud Synchronization Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, query, orderBy, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7UeJhFHhtVTROAmEfXAy74-X-DHNzScI",
+            authDomain: "hotnoods.firebaseapp.com",
+            projectId: "hotnoods",
+            storageBucket: "hotnoods.firebasestorage.app",
+            messagingSenderId: "238201947950",
+            appId: "1:238201947950:web:d93e63bafcb1ed708cdcbf",
+            measurementId: "G-02QF58326Q"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Default App State
+        let state = {
+            ingredients: {
+                teabag: { name: 'Teabag', cost: 800, stock: 100, demand: 1, recipes: ['tea'] },
+                mint: { name: 'Mint Leaf', cost: 500, stock: 100, demand: 1, recipes: ['tea'] },
+                miso_paste: { name: 'Miso Paste', cost: 1000, stock: 100, demand: 1, recipes: ['miso'] },
+                seaweed: { name: 'Seaweed', cost: 500, stock: 150, demand: 3, recipes: ['miso', 'udon', 'ramen'], highDemand: true },
+                tofu: { name: 'Tofu', cost: 500, stock: 100, demand: 2, recipes: ['miso', 'udon'] },
+                noodles: { name: 'Noodles', cost: 1000, stock: 150, demand: 2, recipes: ['udon', 'ramen'], highDemand: true },
+                egg: { name: 'Boiled Egg', cost: 500, stock: 100, demand: 1, recipes: ['ramen'] }
+            },
+            menu: {
+                tea: { name: 'Green Tea', price: 5000, icon: '🍵', recipe: { teabag: 1, mint: 1 } },
+                miso: { name: 'Miso Soup', price: 7000, icon: '🥣', recipe: { miso_paste: 1, seaweed: 1, tofu: 1 } },
+                udon: { name: 'Udon', price: 8500, icon: '🍜', recipe: { noodles: 1, seaweed: 1, tofu: 1 } },
+                ramen: { name: 'Ramen', price: 8000, icon: '🍜', recipe: { noodles: 1, egg: 1, seaweed: 1 } }
+            }
+        };
+
+        let cart = { tea: 0, miso: 0, udon: 0, ramen: 0, combo: 0 };
+        let isDiscountActive = false;
+        let currentUser = null;
+        let openOrders = [];
+        let busyOrders = new Set();
+        let localWriting = false;
+
+        function getStaffId() {
+            let id = localStorage.getItem('hotNoodsStaffId');
+            if (!id) {
+                id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/-/g, '').slice(0, 20);
+                localStorage.setItem('hotNoodsStaffId', id);
+            }
+            return id;
+        }
+
+        function setBadge(connected) {
+            const badge = document.getElementById('syncBadge');
+            if (connected) {
+                badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950 border border-emerald-700 text-noodsGreen text-xs font-semibold";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-noodsGreen animate-pulse"></span> Live Synced Across Staff`;
+            } else {
+                badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-950 border border-red-700 text-red-400 text-xs font-semibold";
+                badge.innerHTML = `<span>🔴 Sync Disconnected</span>`;
+            }
+        }
+
+        async function initFirebaseSync() {
+            currentUser = { uid: getStaffId() };
+            document.getElementById('staffUidDisplay').innerText = currentUser.uid;
+
+            // Check if Firestore document exists, if not initialize it
+            const docRef = doc(db, "hotnoods", "mainState");
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                await setDoc(docRef, { state, updatedAt: Date.now() });
+            }
+
+            // Real-time listener for Inventory & Menu updates
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists() && !localWriting) {
+                    const data = docSnap.data();
+                    if (data.state) {
+                        state = data.state;
+                        renderAll();
+                    }
+                }
+                setBadge(true);
+            }, (error) => {
+                console.error("Firestore sync error:", error);
+                setBadge(false);
+            });
+
+            // Real-time listener for Open Orders
+            onSnapshot(collection(db, "hotnoods_orders"), (snapshot) => {
+                openOrders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderOpenOrders();
+            });
+
+            // Real-time listener for Audit Logs
+            onSnapshot(collection(db, "hotnoods_logs"), (snapshot) => {
+                const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                renderLogs(logs);
+            });
+
+            renderAll();
+        }
+
+        async function saveStateToFirestore() {
+            localWriting = true;
+            try {
+                const docRef = doc(db, "hotnoods", "mainState");
+                await setDoc(docRef, { state, updatedAt: Date.now() });
+                setBadge(true);
+            } catch (err) {
+                console.error("Failed to save state:", err);
+                setBadge(false);
+                showToast("❌ Failed to sync to cloud", "red");
+            } finally {
+                setTimeout(() => { localWriting = false; }, 300);
+            }
+        }
+
+        async function logActivity(title, details, amount = null, type = 'SALE') {
+            try {
+                await addDoc(collection(db, "hotnoods_logs"), {
+                    title, details, amount, type, staffUid: currentUser.uid, createdAt: Date.now()
+                });
+            } catch (err) {
+                console.error("Failed to log activity:", err);
+            }
+        }
+
+        const COMBO_PRICE = 12000;
+
+        function summarizeOrder(items, discount) {
+            const lines = [];
+            const deductions = {};
+            let subtotal = 0, cost = 0, count = 0;
+
+            const accumulate = (recipeObj, multiplier) => {
+                for (const ingKey in recipeObj) {
+                    deductions[ingKey] = (deductions[ingKey] || 0) + (recipeObj[ingKey] * multiplier);
+                }
+            };
+
+            for (const key in state.menu) {
+                const qty = items[key] || 0;
+                if (qty > 0) {
+                    const item = state.menu[key];
+                    lines.push({ key, icon: item.icon, name: item.name, qty, total: qty * item.price });
+                    subtotal += qty * item.price;
+                    cost += qty * getDishCraftCost(item.recipe);
+                    count += qty;
+                    accumulate(item.recipe, qty);
+                }
+            }
+
+            if (items.combo > 0) {
+                const qty = items.combo;
+                lines.push({ key: 'combo', icon: '🍱', name: 'Hot Noods Meal Deal', qty, total: qty * COMBO_PRICE });
+                subtotal += qty * COMBO_PRICE;
+                cost += qty * (getDishCraftCost(state.menu.tea.recipe) + getDishCraftCost(state.menu.ramen.recipe));
+                count += qty * 2;
+                accumulate(state.menu.tea.recipe, qty);
+                accumulate(state.menu.ramen.recipe, qty);
+            }
+
+            const discountVal = discount ? subtotal * 0.20 : 0;
+            const total = subtotal - discountVal;
+            return { lines, deductions, subtotal, cost, count, discountVal, total, profit: total - cost };
+        }
+
+        function findShortage(deductions) {
+            for (const ingKey in deductions) {
+                const required = deductions[ingKey];
+                const current = state.ingredients[ingKey]?.stock || 0;
+                if (current < required) {
+                    const ingName = state.ingredients[ingKey]?.name || ingKey;
+                    return `Insufficient stock for ${ingName}! Need ${required}, have ${current}`;
+                }
+            }
+            return null;
+        }
+
+        async function applySale(summary, title) {
+            for (const ingKey in summary.deductions) {
+                if (state.ingredients[ingKey]) {
+                    state.ingredients[ingKey].stock -= summary.deductions[ingKey];
+                }
+            }
+            renderAll();
+            await saveStateToFirestore();
+            await logActivity(title, `Items deducted from stock`, summary.total, 'SALE');
+        }
+
+        function renderOpenOrders() {
+            const grid = document.getElementById('openOrdersGrid');
+            document.getElementById('openOrdersCount').innerText = openOrders.length;
+            grid.innerHTML = '';
+
+            if (openOrders.length === 0) {
+                grid.innerHTML = `<div class="text-center py-6 text-gray-500 text-sm w-full">No open orders. Build an order in the cart and hit "Hold as Open Order".</div>`;
+                return;
+            }
+
+            openOrders.forEach((order) => {
+                const summary = summarizeOrder(order.items, order.discount);
+                const shortage = findShortage(summary.deductions);
+                const busy = busyOrders.has(order.id);
+                const placed = order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
+
+                const card = document.createElement('div');
+                card.className = `shrink-0 w-64 bg-zinc-900 border ${shortage ? 'border-red-800' : 'border-cardBorder'} rounded-xl p-4 flex flex-col gap-3 ${busy ? 'opacity-50' : ''}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="min-w-0">
+                            <div class="font-bold text-sm text-gray-100 truncate">${order.label || 'Order'}</div>
+                            <div class="text-[10px] text-gray-500">Placed ${placed}</div>
+                        </div>
+                        <button onclick="window.cancelOrder('${order.id}')" title="Cancel order" class="text-gray-500 hover:text-red-400 font-bold px-1 text-xs" ${busy ? 'disabled' : ''}>✕</button>
+                    </div>
+                    <div class="space-y-1 text-xs flex-1">
+                        ${summary.lines.map(l => `
+                            <div class="flex justify-between gap-2">
+                                <span class="text-gray-300">${l.qty}x${l.icon} ${l.name}</span> <span class="text-gray-400">$\${l.total.toLocaleString()}</span>
+                            </div>`).join('')}
+                        ${order.discount ? `<div class="flex justify-between text-noodsGreen"><span>MelEmergency (20%)</span><span>-\$\${summary.discountVal.toLocaleString()}</span></div>` : ''}
+                    </div>
+                    <div class="flex justify-between items-baseline border-t border-zinc-800 pt-2">
+                        <span class="text-xs text-gray-400">Total</span>
+                        <span class="text-lg font-extrabold text-noodsGold">$${summary.total.toLocaleString()}</span>
+                    </div>
+                    ${shortage ? `<div class="text-[10px] text-red-400 font-semibold">⚠️ \${shortage}</div>` : ''}
+                    <button onclick="window.completeOrder('${order.id}')" ${busy ? 'disabled' : ''} class="w-full px-3 py-2.5 bg-noodsGreen hover:bg-emerald-400 text-black font-extrabold text-xs rounded-lg transition-all shadow flex items-center justify-center gap-2 active:scale-95">
+                        <span>⚡</span> Complete & Deduct
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderLogs(logs) {
+            const logsList = document.getElementById('auditLogList');
+            logsList.innerHTML = '';
+
+            if (logs.length === 0) {
+                logsList.innerHTML = `<div class="text-center py-8 text-gray-500 text-sm">No recorded sales or activity logs yet.</div>`;
+                return;
+            }
+
+            logs.slice(0, 30).forEach(log => {
+                const dateStr = log.createdAt ? new Date(log.createdAt).toLocaleTimeString() : 'Just now';
+                const el = document.createElement('div');
+                el.className = 'bg-zinc-900 border border-cardBorder p-3 rounded-lg flex justify-between items-center text-xs';
+                el.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="font-bold text-gray-200 flex items-center gap-1.5">
+                            <span>${log.type === 'SALE' ? '💰' : '📦'}</span>
+                            <span>${log.title}</span>
+                        </div>
+                        <div class="text-gray-400 text-[11px]">${log.details || ''}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="text-noodsGold font-bold">${log.amount != null ? '$' + Number(log.amount).toLocaleString() : ''}</div>
+                        <div class="text-[10px] text-gray-500">${dateStr}</div>
+                    </div>
+                `;
+                logsList.appendChild(el);
+            });
+        }
+
+        function getDishCraftCost(recipeObj) {
+            let cost = 0;
+            for (const key in recipeObj) {
+                if (state.ingredients[key]) {
+                    cost += recipeObj[key] * (state.ingredients[key].cost || 0);
+                }
+            }
+            return cost;
+        }
+
+        function renderAll() {
+            renderPOSMenu();
+            renderCart();
+            renderBottlenecks();
+            renderInventoryTable();
+            renderMenuPricingTable();
+            renderOpenOrders();
+        }
+
+        function renderPOSMenu() {
+            const grid = document.getElementById('posMenuGrid');
+            grid.innerHTML = '';
+
+            for (const key in state.menu) {
+                const item = state.menu[key];
+                const craftCost = getDishCraftCost(item.recipe);
+                const ingText = Object.keys(item.recipe).map(k => `${item.recipe[k]}x ${state.ingredients[k]?.name || k}`).join(', ');
+
+                const card = document.createElement('div');
+                card.className = "bg-cardBg border border-cardBorder hover:border-noodsGold/40 rounded-xl p-4 transition-all flex flex-col justify-between gap-3 shadow-md";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-base text-gray-100 flex items-center gap-1.5">${item.icon} ${item.name}</h3>
+                            <span class="text-noodsGold font-bold text-sm">$${item.price.toLocaleString()}</span>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">${ingText}</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Craft Cost: $${craftCost.toLocaleString()}</p>
+                    </div>
+
+                    <div class="flex items-center gap-2 mt-2">
+                        <button onclick="window.changeQty('${key}', -1)" class="w-9 h-9 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-all flex items-center justify-center active:scale-90 text-sm">-</button>
+                        <button onclick="window.changeQty('${key}', 1)" class="flex-1 h-9 bg-noodsRed hover:bg-red-600 text-white font-bold text-xs rounded-lg transition-all active:scale-95 shadow">+ ${item.name}</button>
+                        <div class="flex gap-1">
+                            <button onclick="window.changeQty('${key}', 5)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+5</button>
+                            <button onclick="window.changeQty('${key}', 10)" class="px-2 h-9 bg-zinc-800 hover:bg-zinc-700 text-noodsGold font-bold text-xs rounded-lg transition-all active:scale-90">+10</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartList');
+            container.innerHTML = '';
+
+            const summary = summarizeOrder(cart, isDiscountActive);
+            summary.lines.forEach(l => renderCartRow(container, l.icon, l.name, l.qty, l.total, l.key));
+
+            if (summary.count === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500 text-sm">Cart is empty. Click items to add.</div>`;
+            }
+
+            document.getElementById('cartSubtotal').innerText = `$${summary.subtotal.toLocaleString()}`;
+            document.getElementById('cartDiscount').innerText = `-$${summary.discountVal.toLocaleString()}`;
+            document.getElementById('cartCost').innerText = `$${summary.cost.toLocaleString()}`;
+            document.getElementById('cartTotal').innerText = `$${summary.total.toLocaleString()}`;
+            document.getElementById('cartProfit').innerText = `$${summary.profit.toLocaleString()}`;
+
+            const discRow = document.getElementById('cartDiscountRow');
+            if (isDiscountActive) discRow.classList.remove('hidden');
+            else discRow.classList.add('hidden');
+        }
+
+        function renderCartRow(container, icon, name, qty, total, key) {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between bg-zinc-900 p-2.5 rounded-lg border border-zinc-800 text-xs';
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-base">${icon}</span>
+                    <div>
+                        <div class="font-bold text-gray-200">${name}</div>
+                        <div class="text-gray-400">Qty: ${qty}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="font-bold text-noodsGold">$${total.toLocaleString()}</span>
+                    <button onclick="window.removeCartItem('${key}')" class="text-gray-500 hover:text-red-400 font-bold px-1.5">✕</button>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        function renderBottlenecks() {
+            const grid = document.getElementById('bottleneckGrid');
+            grid.innerHTML = '';
+
+            for (const menuKey in state.menu) {
+                const item = state.menu[menuKey];
+                let maxCraftable = Infinity;
+                let limitingIng = null;
+
+                for (const ingKey in item.recipe) {
+                    const required = item.recipe[ingKey];
+                    const currentStock = state.ingredients[ingKey]?.stock || 0;
+                    const possible = Math.floor(currentStock / required);
+
+                    if (possible < maxCraftable) {
+                        maxCraftable = possible;
+                        limitingIng = state.ingredients[ingKey]?.name || ingKey;
+                    }
+                }
+
+                if (maxCraftable === Infinity) maxCraftable = 0;
+
+                const card = document.createElement('div');
+                card.className = "bg-zinc-900 border border-cardBorder rounded-lg p-3 flex flex-col justify-between";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-sm text-gray-200 flex items-center gap-1">${item.icon} ${item.name}</span>
+                            <span class="text-xs font-extrabold px-2 py-0.5 rounded ${maxCraftable > 10 ? 'bg-emerald-950 text-noodsGreen' : 'bg-red-950 text-red-400'}">
+                                ${maxCraftable} Available
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2">
+                            Bottleneck: <span class="font-semibold text-noodsGold">${limitingIng || 'None'}</span>
+                        </p>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+
+            for (const key in state.ingredients) {
+                const ing = state.ingredients[key];
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-semibold text-gray-200">${ing.name}</td>
+                    <td class="py-3 px-3">
+                        ${ing.highDemand 
+                            ? `<span class="bg-red-950 text-noodsRed text-[10px] font-bold px-2 py-0.5 rounded-full border border-noodsRed/40">🔥 High Demand (\${ing.demand}x)</span>`
+                            : `<span class="text-gray-400 text-xs">Standard (1x)</span>`
+                        }
+                    </td>
+                    <td class="py-3 px-3">
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-400">$</span>
+                            <input type="number" value="${ing.cost}" onchange="window.updateIngCost('${key}', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">
+                        </div>
+                    </td>
+                    <td class="py-3 px-3">
+                        <input type="number" value="${ing.stock}" onchange="window.updateIngStock('${key}', this.value)" class="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white font-bold focus:outline-none focus:border-noodsGold">
+                    </td>
+                    <td class="py-3 px-3">
+                        <div class="flex gap-1">
+                            <button onclick="window.addStock('${key}', 10)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+10</button>
+                            <button onclick="window.addStock('${key}', 50)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+50</button>
+                            <button onclick="window.addStock('${key}', 100)" class="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-noodsGreen text-xs font-bold rounded">+100</button>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 text-right">
+                        <button onclick="window.resetStock('${key}')" class="text-xs text-gray-500 hover:text-red-400">Reset</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function renderMenuPricingTable() {
+            const tbody = document.getElementById('menuPricingTableBody');
+            tbody.innerHTML = '';
+
+            for (const key in state.menu) {
+                const item = state.menu[key];
+                const craftCost = getDishCraftCost(item.recipe);
+                const profit = item.price - craftCost;
+                const margin = item.price > 0 ? ((profit / item.price) * 100).toFixed(1) : 0;
+                const ingText = Object.keys(item.recipe).map(k => `${item.recipe[k]}x ${state.ingredients[k]?.name || k}`).join(', ');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-bold text-gray-200 flex items-center gap-1.5">
+                        <span>${item.icon}</span> ${item.name}
+                    </td>
+                    <td class="py-3 px-3 text-xs text-gray-400">${ingText}</td>
+                    <td class="py-3 px-3 text-xs text-red-300 font-semibold">$${craftCost.toLocaleString()}</td>
+                    <td class="py-3 px-3">
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-400">$</span>
+                            <input type="number" value="${item.price}" onchange="window.updateMenuPrice('${key}', this.value)" class="w-24 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-noodsGold font-bold focus:outline-none focus:border-noodsGold">
+                        </div>
+                    </td>
+                    <td class="py-3 px-3 text-xs font-bold text-noodsGreen">+$${profit.toLocaleString()}</td>
+                    <td class="py-3 px-3 text-right">
+                        <span class="text-xs font-bold px-2 py-0.5 rounded ${margin > 70 ? 'bg-emerald-950 text-noodsGreen' : 'bg-yellow-950 text-noodsGold'}">
+                            ${margin}%
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Global Event Handlers
+        window.changeQty = function(key, delta) {
+            cart[key] = Math.max(0, (cart[key] || 0) + delta);
+            renderCart();
+        };
+
+        window.addComboToCart = function() {
+            cart.combo++;
+            renderCart();
+            showToast("Added Meal Deal Combo to cart!");
+        };
+
+        window.removeCartItem = function(key) {
+            cart[key] = 0;
+            renderCart();
+        };
+
+        window.clearCart = function() {
+            cart = { tea: 0, miso: 0, udon: 0, ramen: 0, combo: 0 };
+            renderCart();
+        };
+
+        window.toggleDiscount = function() {
+            isDiscountActive = !isDiscountActive;
+            const btn = document.getElementById('discountToggleBtn');
+            if (isDiscountActive) {
+                btn.innerText = "ON (20%)";
+                btn.className = "px-4 py-2 bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow transition-all";
+            } else {
+                btn.innerText = "OFF";
+                btn.className = "px-4 py-2 bg-zinc-800 text-gray-300 font-bold text-xs uppercase tracking-wider rounded-lg border border-zinc-700 transition-all";
+            }
+            renderCart();
+        };
+
+        window.checkoutSale = async function() {
+            const summary = summarizeOrder(cart, isDiscountActive);
+            if (summary.count === 0) {
+                showToast("Cart is empty!", "red");
+                return;
+            }
+
+            const shortage = findShortage(summary.deductions);
+            if (shortage) {
+                showToast(`⚠️ ${shortage}`, "red");
+                return;
+            }
+
+            clearCart();
+            await applySale(summary, `Completed Sale (${summary.count} items)`);
+            showToast("✅ Sale completed & stock deducted live!");
+        };
+
+        window.holdOrder = async function() {
+            const summary = summarizeOrder(cart, isDiscountActive);
+            if (summary.count === 0) {
+                showToast("Cart is empty!", "red");
+                return;
+            }
+
+            const labelInput = document.getElementById('orderLabelInput');
+            try {
+                await addDoc(collection(db, "hotnoods_orders"), {
+                    items: cart,
+                    discount: isDiscountActive,
+                    label: labelInput.value || 'Table Order',
+                    staffUid: currentUser?.uid,
+                    createdAt: Date.now()
+                });
+                labelInput.value = '';
+                clearCart();
+                showToast("📌 Order added to Open Orders");
+            } catch (err) {
+                console.error("Hold order failed:", err);
+                showToast("❌ Failed to save open order", "red");
+            }
+        };
+
+        window.completeOrder = async function(id) {
+            const order = openOrders.find(o => o.id === id);
+            if (!order || busyOrders.has(id)) return;
+
+            const summary = summarizeOrder(order.items, order.discount);
+            const shortage = findShortage(summary.deductions);
+            if (shortage) {
+                showToast(`⚠️ ${shortage}`, "red");
+                return;
+            }
+
+            busyOrders.add(id);
+            renderOpenOrders();
+            try {
+                await deleteDoc(doc(db, "hotnoods_orders", id));
+                const name = order.label || 'Order';
+                await applySale(summary, `Completed ${name} (${summary.count} items)`);
+                showToast(`✅ ${name} completed & stock deducted!`);
+            } catch (err) {
+                console.error("Complete order failed:", err);
+                showToast("❌ Failed to complete order", "red");
+            } finally {
+                busyOrders.delete(id);
+                renderOpenOrders();
+            }
+        };
+
+        window.cancelOrder = async function(id) {
+            const order = openOrders.find(o => o.id === id);
+            if (!order || busyOrders.has(id)) return;
+            if (!confirm(`Cancel ${order.label || 'order'}? No stock will be deducted.`)) return;
+
+            busyOrders.add(id);
+            renderOpenOrders();
+            try {
+                await deleteDoc(doc(db, "hotnoods_orders", id));
+                showToast("Order cancelled");
+            } catch (err) {
+                console.error("Cancel order failed:", err);
+                showToast("❌ Failed to cancel order", "red");
+            } finally {
+                busyOrders.delete(id);
+                renderOpenOrders();
+            }
+        };
+
+        window.copyReceipt = function() {
+            let subtotal = 0;
+            let itemsText = [];
+
+            for (const key in state.menu) {
+                if (cart[key] > 0) {
+                    const line = `${cart[key]}x ${state.menu[key].name} ($${(cart[key] * state.menu[key].price).toLocaleString()})`;
+                    itemsText.push(line);
+                    subtotal += cart[key] * state.menu[key].price;
+                }
+            }
+
+            if (cart.combo > 0) {
+                itemsText.push(`${cart.combo}x Hot Noods Meal Deal ($${(cart.combo * 12000).toLocaleString()})`);
+                subtotal += cart.combo * 12000;
+            }
+
+            if (itemsText.length === 0) {
+                showToast("Cart is empty!", "red");
+                return;
+            }
+
+            const discount = isDiscountActive ? subtotal * 0.20 : 0;
+            const finalTotal = subtotal - discount;
+
+            const receiptString = `*** 🍜 HOT NOODS ORDER RECEIPT ***\n` +
+                itemsText.join('\n') + `\n` +
+                (isDiscountActive ? `Discount (MelEmergency 20%): -$${discount.toLocaleString()}\n` : '') +
+                `--------------------------\n` +
+                `TOTAL: $${finalTotal.toLocaleString()}`;
+
+            const temp = document.createElement('textarea');
+            temp.value = receiptString;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+
+            showToast("📋 Receipt copied to clipboard!");
+        };
+
+        window.updateIngCost = async function(key, val) {
+            state.ingredients[key].cost = Math.max(0, parseFloat(val) || 0);
+            await saveStateToFirestore();
+            showToast(`Updated ${state.ingredients[key].name} unit cost to $${state.ingredients[key].cost}`);
+        };
+
+        window.updateIngStock = async function(key, val) {
+            state.ingredients[key].stock = Math.max(0, parseInt(val) || 0);
+            await saveStateToFirestore();
+            showToast(`Updated ${state.ingredients[key].name} stock to ${state.ingredients[key].stock}`);
+        };
+
+        window.addStock = async function(key, count) {
+            state.ingredients[key].stock += count;
+            await saveStateToFirestore();
+            await logActivity(`Restocked ${state.ingredients[key].name}`, `Added +${count} units (Total: ${state.ingredients[key].stock})`, null, 'RESTOCK');
+            showToast(`Added +${count} ${state.ingredients[key].name} to stock!`);
+        };
+
+        window.resetStock = async function(key) {
+            state.ingredients[key].stock = 0;
+            await saveStateToFirestore();
+            showToast(`Reset ${state.ingredients[key].name} stock to 0`);
+        };
+
+        window.updateMenuPrice = async function(key, val) {
+            state.menu[key].price = Math.max(0, parseFloat(val) || 0);
+            await saveStateToFirestore();
+            await logActivity(`Updated ${state.menu[key].name} Price`, `New price set to $${state.menu[key].price}`, state.menu[key].price, 'PRICE');
+            showToast(`Updated ${state.menu[key].name} price to $${state.menu[key].price}`);
+        };
+
+        window.switchTab = function(tab) {
+            document.getElementById('tabPos').classList.add('hidden');
+            document.getElementById('tabInv').classList.add('hidden');
+            document.getElementById('tabLogs').classList.add('hidden');
+
+            document.getElementById('tabBtnPos').className = "px-5 py-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2 transition-all";
+            document.getElementById('tabBtnInv').className = "px-5 py-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2 transition-all";
+            document.getElementById('tabBtnLogs').className = "px-5 py-3 border-b-2 border-transparent text-gray-400 hover:text-gray-200 flex items-center gap-2 transition-all";
+
+            if (tab === 'pos') {
+                document.getElementById('tabPos').classList.remove('hidden');
+                document.getElementById('tabBtnPos').className = "px-5 py-3 border-b-2 border-noodsRed text-noodsRed flex items-center gap-2 transition-all";
+            } else if (tab === 'inv') {
+                document.getElementById('tabInv').classList.remove('hidden');
+                document.getElementById('tabBtnInv').className = "px-5 py-3 border-b-2 border-noodsRed text-noodsRed flex items-center gap-2 transition-all";
+            } else if (tab === 'logs') {
+                document.getElementById('tabLogs').classList.remove('hidden');
+                document.getElementById('tabBtnLogs').className = "px-5 py-3 border-b-2 border-noodsRed text-noodsRed flex items-center gap-2 transition-all";
+            }
+        };
+
+        function showToast(msg, color = "green") {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            if (color === "red") {
+                toast.className = "fixed bottom-6 right-6 z-50 bg-red-600 text-white font-bold px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all border border-red-400";
+                toastIcon.innerText = "⚠️";
+            } else {
+                toast.className = "fixed bottom-6 right-6 z-50 bg-noodsGreen text-black font-bold px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all border border-emerald-300";
+                toastIcon.innerText = "✅";
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 3000);
+        }
+
+        // Initialize Firebase on load
+        initFirebaseSync();
+    </script>
+</body>
+</html>
